@@ -1,0 +1,3 @@
+server bool tango_recklessrocket = true;
+server bool tango_crackshot = true;
+server bool tango_crouch = true;

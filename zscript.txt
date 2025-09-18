@@ -1,0 +1,559 @@
+//=======================================
+//Let's Tango.
+//=======================================
+version "4.10.0"
+class HDTangoEventHandler:eventhandler{
+	override void CheckReplacement(replaceevent e){
+		/*if(e.replacee is "chaingunguy"){
+			if(!random(0,3)){
+				if(random(0,2)){
+					e.replacement = "HDPartyGoon";
+				}else{
+					e.replacement = "undeadrifleman";
+				}
+			}
+		}*/
+		if(e.replacee is "HDGoon"){
+			e.replacement = "HDPartyGoon";
+		}
+	}
+	override void WorldThingSpawned(worldevent e){
+		if(e.thing is "HDGoon"){
+			//resilience.
+			e.thing.health*=1.1;
+			//agility.
+			e.thing.speed*=1.2;
+			//aggression.
+			e.thing.minmissilechance*=0.6;
+			//persistence.
+			e.thing.maxdropoffheight*=4;
+			//dexterity.
+			e.thing.bALWAYSFAST=true;
+		}
+	}
+}
+
+//replacement class that contains all state and other such ai changes.
+class HDPartyGoon:HDGoon{
+	enum suppressionBehaviors{
+		//SBE_SUPPRESS must be the first entry here for random initialization to work.
+		SBE_SUPPRESS = 0,	//default operator behavior
+		SBE_AGGRESSIVE,		//run toward target if out of LOS, else default behavior
+		SBE_AMBUSH,			//lie in wait for target if out of LOS, else default behavior
+		
+		//SBE_MIXED must be the last entry here for random initialization to work (not counting SBE_RECKLESS).
+		SBE_MIXED,			//select a random behavior every call to A_CheckKeepShooting
+		
+		//rare unhinged behavior with no regard for personal safety
+		SBE_RECKLESS,		//always aggressive; launch rocket grenades in some more cases, very recklessly
+	};
+	
+	override void BeginPlay(){
+		super.beginplay();
+		suppressionBehavior = random(SBE_SUPPRESS,SBE_MIXED);
+		//sometimes select reckless 1/6 of the time
+		if(!random(0,5)){
+			suppressionBehavior = SBE_RECKLESS;
+			minmissilechance*=0.6;
+		}
+		//if behavior is SBE_SUPPRESS, 1/3 chance to select mixed instead. I really don't like the default behavior.
+		if(suppressionBehavior==SBE_SUPPRESS && !random(0,2))
+			suppressionBehavior = SBE_MIXED;
+		ambushtime = 0;
+		if(suppressionBehavior==SBE_MIXED){
+			ambushthreshold = random(20,34);
+		}else{
+			ambushthreshold = random(24,60);
+		}
+		
+		isCrouched = false;
+	}
+	
+	
+	//----------------------------
+	//suppression behavior changes
+	//----------------------------
+	int suppressionBehavior; //how the tango will behave when A_CheckKeepShooting is needed (ie when the player rounds a corner etc)
+	bool A_CheckKeepShooting2(statelabel shootstate){
+		A_TangoUncrouch();
+		
+		//A_Log("A_CheckKeepShooting2()");
+		int suppressiontype = suppressionBehavior;
+		//randomize if mixed
+		if(suppressiontype==SBE_MIXED){
+			//set it to a random suppressiontype other than SBE_MIXED
+			suppressiontype = random(SBE_SUPPRESS,SBE_MIXED - 1);
+		}
+		
+		//A_Log("suppressionType "..suppressionBehavior.." (this: "..suppressiontype.." )");
+		switch(suppressiontype){
+			//default behavior: keep shooting if target is out of line of sight or known to be alive
+			default:
+			case SBE_SUPPRESS:
+				return A_CheckKeepShooting(shootstate);
+				break;
+			//aggressive behavior: keep shooting if target is known to be alive, rush them if they're out of LOS
+			case SBE_RECKLESS:
+			case SBE_AGGRESSIVE:
+				if(CheckTargetInSight()){
+					return A_CheckKeepShooting(shootstate);
+				}else{
+					setstatelabel("rushtarget");
+					return false;
+				}
+				break;
+			//ambush behavior: keep shooting if target is known to be alive, sit and wait if they're out of LOS
+			case SBE_AMBUSH:
+				if(CheckTargetInSight()){
+					if(ambushtime>=2)ambushtime = 0;
+					return A_CheckKeepShooting(shootstate);
+				}else{
+					if(ambushtime<2){
+						setstatelabel("waitfortarget");
+						//this goon gets very slightly less patient
+						HDPartyGoon(self).ambushthreshold--;
+					}else{
+						ambushtime = 0;
+						setstatelabel("roam");
+					}
+					return false;
+				}
+				break;
+		}
+		return false;
+	}
+	
+	
+	//----------------------------
+	//ambush behavior
+	//----------------------------
+	int ambushtime;//how long we've been waiting for x8 tics
+	int ambushthreshold;//average time to wait for (10 to 20; x8 tics)
+	action void A_CheckAmbushWait(statelabel endstate){
+		//HDPartyGoon(self).ambushtime++;
+		int atime = HDPartyGoon(self).ambushtime++;
+		int thres = HDPartyGoon(self).ambushthreshold;
+		
+		//if we've been waiting anywhere from 80% to 120% of the threshold, give up and go to endstate.
+		if(atime>random(thres*0.8,thres*1.2)){
+			//A_Log("HDGoon gave up waiting for target");
+			//this goon becomes less patient
+			HDPartyGoon(self).ambushthreshold-=random(1,3);
+			setstatelabel(endstate);
+		}
+	}
+	
+	
+	//A_ZomFrag from zombiestormtroopers, modified for goons.
+	void A_TangoFrag(double force,float dist){
+		bool garbage;actor gg;
+		double cpp=cos(pitch);double spp=sin(pitch);
+		[garbage,gg]=A_SpawnItemEx("HDFragSpoon",
+			cpp*-4,-3,height-6-spp*-4,
+			cpp*3,0,-spp*3,
+			frandom(30,45),SXF_NOCHECKPOSITION|SXF_TRANSFERPITCH
+		);
+		gg.vel+=self.vel;
+		double gforce = force*frandom(0.85,1.05);
+		//if target farther than 10 meters, increase the force a bit by some magic number. will probably be a bitch to tune right.
+		if(dist>HDCONST_ONEMETRE*10.){
+			//currently +15% force per meter of distance beyond 10m
+			float distmeter = dist/HDCONST_ONEMETRE;
+			gforce *= 1.0 + ((distmeter - 10.0) *0.15);
+		}
+		[garbage,gg]=A_SpawnItemEx("HDFragGrenade",
+			0,0,height-6,
+			cpp*gforce,0,-spp*gforce,
+			0,SXF_NOCHECKPOSITION|SXF_TRANSFERPITCH
+		);
+		gg.vel+=self.vel;
+	}
+	
+	
+	//function for the reckless rocket grenade usage to use
+	void A_TryRocketGrenade(){
+		if(
+			(
+				(wep==HDMW_ROCKET&&gunloaded>0)
+				||(
+					glloaded
+					&&(
+						wep==HDMW_ZM66
+						||wep==HDMW_SMG
+						||wep==HDMW_HUNTER
+					)
+				)
+			)
+		){
+			if(A_CheckBlast())
+			A_TurnToAim(25,shootstate:"shootgl");
+			//setstatelabel("shootgl");
+			return;
+		}
+	}
+	
+	
+	//items dropped
+	//add frags, small chance for a live frag too
+	//if you see this, shhhhh let them discover on their own
+	override void deathdrop(){
+		super.deathdrop();
+		//A_Log("Tango timesdied "..timesdied);
+		
+		//if spawned less than a second ago, abort.
+		//if we've already spilled our main goods, 1/2 chance to abort.
+		if(getage()<35 || (timesdied>1 && random(0,1)))return;
+		
+		//drop 0-2 frags
+		DropNewItem("HDFragGrenadeAmmo",180);
+		DropNewItem("HDFragGrenadeAmmo",90);
+		
+		//drop extra ammo!
+		class<actor> dropammo="";
+		if(wep==HDMW_SMG)dropammo="HD9mMag30";
+		else if(wep==HDMW_ZM66)dropammo="HD4mMag";
+		else if(wep==HDMW_ROCKET)dropammo="HDRocketAmmo";
+		else if(wep==HDMW_HUNTER)dropammo="ShellPickup";
+		if(
+			dropammo!=""
+		)DropNewItem(dropammo);
+		if(!random(0,12+timesdied))DropNewItem("HD9mMag15");
+		if(
+			!random(0,timesdied)&&wep==HDMW_SMG
+		)DropNewItem("HDRocketAmmo");
+		
+		//1/50 chance of dropping a live frag >:3
+		if(!random(0,49)){
+			let fff = DropNewItem("HDFragGrenade");
+			fff.vel=vel+(frandom(-1,1),frandom(-1,1),2);
+			
+			fff = DropNewItem("HDFragSpoon");
+			fff.vel=vel+(frandom(-1.5,1.5),frandom(-1.5,1.5),1);
+		}
+	}
+	
+	
+	//crouching and uncrouching functions
+	bool isCrouched;
+	action void A_TangoCrouch(){
+		if(HDPartyGoon(self).isCrouched || !tango_crouch)
+			return;
+		self.sprite = GetSpriteIndex("PLYC");
+		self.height/= 2;
+		self.speed*=0.7;
+		HDPartyGoon(self).isCrouched = true;
+	}
+	action void A_TangoUncrouch(){
+		if(!HDPartyGoon(self).isCrouched) 
+			return;
+		self.sprite = GetSpriteIndex("PLAY");
+		self.height*= 2;
+		self.speed/=0.7;
+		HDPartyGoon(self).isCrouched = false;
+	}
+	
+	
+	states{
+	rushtarget:
+		#### A 0 A_JumpIf(
+			(//random chances based on behavior type
+			(suppressionBehavior==SBE_AGGRESSIVE && !random(0,2))//aggressive has 1/3 frag chance
+			||suppressionBehavior==SBE_RECKLESS//reckless always frags
+			||(!random(0,4))//otherwise 1/5 frag chance
+			)
+			&&(//distance checks
+			//reckless type doesn't give a fuck about distance, every other type wants at least 6 meters distance
+			lasttargetdist>(suppressionBehavior!=SBE_RECKLESS?HDCONST_ONEMETRE*6.:HDCONST_ONEMETRE)
+			),
+			"frag");
+	rushtarget2:
+		#### A 0 A_Vocalize(activesound,volume:frandom(0.7,1.),pitch:frandom(0.98,1.02));
+	rushtarget3:
+		#### AABB 3 A_HDChase(speedmult:0.9);
+		#### E 0 A_JumpIf(CheckTargetInSight(),"missile");
+		#### CCDD 3 A_HDChase(speedmult:1.0);
+		#### E 0 A_JumpIf(CheckTargetInSight(),"missile");
+		loop;
+	waitfortarget:
+		#### E 8;
+		#### E 0 A_JumpIf(CheckTargetInSight(),"aiming");
+		#### E 0 {
+			//if behavior is mixed, 50/50 chance to rush the target instead of just going back to roaming when giving up.
+			if(suppressionBehavior==SBE_MIXED && random(0,1)){
+				A_CheckAmbushWait("rushtarget");
+			}else{
+				//3/4 chance to just give up, 1/4 chance to try attacking again
+				if(random(0,3)){
+					A_Vocalize(activesound,volume:frandom(0.7,1.),pitch:frandom(0.98,1.02));
+					A_CheckAmbushWait("roam");
+				}else{
+					//buuuut 50% chance to throw a grenade instead of attacking
+					if(random(0,1)){
+						A_CheckAmbushWait("aiming");
+					}else{
+						A_Vocalize(activesound,volume:frandom(0.7,1.),pitch:frandom(0.98,1.02));
+						A_CheckAmbushWait("frag");
+					}
+				}
+			}
+			//otherwise simply loop
+		}
+		loop;
+		
+	
+	spawn:
+		PLYC ABCDEFG 0;
+		PLAY ABCDEFG 0;
+		goto roam;
+	see:
+		#### A 0 A_TangoUncrouch();
+		#### AABBCCDD 3 A_HDChase(speedmult:0.6);
+		#### E 0 A_JumpIf(targetinsight,"see");
+	roam:
+		#### A 0 A_TangoUncrouch();
+		#### AABBCCDD 4 A_HDChase(flags:CHF_LOOK,speedmult:0.3);
+		#### E 0 A_Jump(128,"roam");
+		---- A 0 setstatelabel("roam2");
+	roam2:
+		#### A 0 A_JumpIf(threat,"see");
+		#### A 0{
+			angle+=DecideOnHandedness(-frandom(30,50));
+			A_HDLook();
+		}
+		#### EEEE 2 A_Watch();
+		#### A 0 A_JumpIf(threat,"see");
+		#### A 0{
+			angle+=DecideOnHandedness(-frandom(30,50));
+			A_HDLook();
+		}
+		#### EEEE 2 A_Watch();
+		#### A 0 A_Jump(90,"roam2");
+		#### E 0 A_JumpIf(targetinsight,"see");
+		#### E 0 setstatelabel("roam");
+		
+	shootzm66:
+		#### E 1;
+		#### E 1{
+			if(jammed){
+				setstatelabel("unjam");
+				return;
+			}
+			class<actor> mn="HDB_426";
+			A_LeadTarget(lasttargetdist/getdefaultbytype(mn).speed,randompick(0,0,0,1));
+			hdmobai.DropAdjust(self,mn);
+		}
+	pullzm66:
+		#### E 0{gunspent=min(gunloaded,randompick(1,1,1,3));}
+	firezm66:
+		#### F 0 A_JumpIf(gunloaded<1,"ohforfuckssake");
+		#### FFF 1 bright light("SHOT"){
+			if(gunloaded<1||gunspent<1){
+				setstatelabel("firezm66end");
+				return;
+			}
+			gunloaded--;gunspent--;
+			A_StartSound("weapons/rifle",CHAN_WEAPON);
+			HDBulletActor.FireBullet(self,"HDB_426");
+			if(!random(0,1999-gunspent)){
+				jammed=true;
+				setstatelabel("unjam");
+			}
+		}
+	firezm66end:
+		#### E 1 A_ShoutAlert(1.,SAF_SILENT);
+		#### E 0 A_JumpIf(random(0,1),"zm66nochase");
+	zm66chase:
+		#### ABCD 3 A_HDChase(null,null,speedmult:0.65);
+	zm66nochase:
+		#### E 0 A_CheckKeepShooting2("pullzm66");
+		goto see;
+		
+	shootsmg:
+		#### E 1;
+		#### E 1{
+			class<actor> mn="HDB_9";
+			A_LeadTarget(lasttargetdist/getdefaultbytype(mn).speed,randompick(0,0,0,1));
+			hdmobai.DropAdjust(self,mn);
+		}
+	firesmg:
+		#### F 0 A_JumpIf(gunloaded<1,"ohforfuckssake");
+		#### F 1 bright light("SHOT"){
+			gunloaded--;
+			A_StartSound("weapons/smg",CHAN_WEAPON,volume:0.7);
+			HDBulletActor.FireBullet(self,"HDB_9",speedfactor:1.1);
+			A_ShoutAlert(0.125,SAF_SILENT);
+		}
+		#### E 2 A_EjectSMGCasing();
+		#### E 0 A_JumpIf(
+			gunloaded>0
+			&&random(0,2)
+			&&checksight(target)
+		,"firesmg");
+	firesmgend:
+		#### E 2 A_ShoutAlert(1.,SAF_SILENT);
+		#### ABCD 3 A_HDChase(null,null,speedmult:0.6);
+		#### E 0 A_CheckKeepShooting2("firesmg");
+		goto see;
+		
+	shootsg:
+		#### E 2;
+		#### E 1{
+			class<actor> mn="HDB_00";
+			A_LeadTarget(lasttargetdist/getdefaultbytype(mn).speed,randompick(0,0,0,1));
+			hdmobai.DropAdjust(self,mn);
+
+			//aim for head or legs
+			if(
+				target
+				&&target.countinv("HDArmourWorn")
+				&&abs(pitch)<45
+				&&!random(0,2)
+			){
+				double ddd=max(distance2d(target),radius);
+				double ppp=frandom(10,25)*100/ddd;
+				pitch+=random(0,2)?ppp:-ppp;
+			}
+		}
+	firesg:
+		#### F 0 A_JumpIf(gunloaded<1,"ohforfuckssake");
+		#### F 1 bright light("SHOT"){
+			gunloaded--;
+			A_ShoutAlert(1.,SAF_SILENT);
+			Hunter.Fire(self);
+		}
+	firesgend:
+		#### E 1{
+			if(random(0,4)){
+				gunspent=0;
+				A_SpawnItemEx("HDSpentShell",
+					cos(pitch)*8,0,height-7-sin(pitch)*8,
+					vel.x+cos(pitch)*cos(angle-random(86,90))*6,
+					vel.y+cos(pitch)*sin(angle-random(86,90))*6,
+					vel.z+sin(pitch)*random(5,7),0,
+					SXF_ABSOLUTEMOMENTUM|SXF_NOCHECKPOSITION|SXF_TRANSFERPITCH
+				);
+			}else gunspent=1;
+		}
+		#### E 2 A_JumpIf(gunspent,"firesgpump");
+		---- A 0 A_Jump(256,"firesgreallyend");
+	firesgpump:
+		#### A 4{
+			A_HDChase(null,null,speedmult:0.6);
+			gunspent=0;
+			A_StartSound("weapons/huntrackbak",8);
+			A_SetTics(random(3,6));
+			A_SpawnItemEx("HDSpentShell",
+				cos(pitch)*8,0,height-7-sin(pitch)*8,
+				vel.x+cos(pitch)*cos(angle-random(86,90))*6,
+				vel.y+cos(pitch)*sin(angle-random(86,90))*6,
+				vel.z+sin(pitch)*random(5,7),0,
+				SXF_ABSOLUTEMOMENTUM|SXF_NOCHECKPOSITION|SXF_TRANSFERPITCH
+			);
+		}
+		#### B 3 {
+			A_StartSound("weapons/huntrackfwd",8);
+			A_HDChase(null,null,speedmult:0.6);
+		}
+		#### CD 3 A_HDChase(null,null,speedmult:0.6);
+	firesgreallyend:
+		#### E random(3,6) A_HDChase(null,null,speedmult:0.7);
+		#### E 0 A_CheckKeepShooting2("firesg");
+		goto see;
+	
+	missile:
+		#### A 0 A_JumpIf(
+			(suppressionBehavior==SBE_RECKLESS || suppressionBehavior==SBE_AGGRESSIVE)?(!random(0,1)):(random(0,3)),
+			"missile2");
+		//1/4 chance to leap toward the player before starting an attack
+		//1/2 for aggressive and reckless types
+		#### C 1 {
+			A_FaceTarget();
+			if(floorz>=pos.z)
+				A_ChangeVelocity(lasttargetdist>128?3:-3,randompick(-2,2),2,CVF_RELATIVE);
+		}
+	missile2://suppressionBehavior SBE_RECKLESS has a 1/5 chance to throw an explosive instead, for no real reason.
+		#### A 0 A_JumpIf(suppressionBehavior==SBE_RECKLESS && !random(0,4),"frag");
+		#### A 0 {
+			//chance to crouch before firing
+			if(!random(0,4)) A_TangoCrouch();
+		}
+		#### AB 2 A_TurnToAim(55,shootstate:"aiming");
+		loop;
+	aiming:
+		#### E 1{
+			double maxspread = frandom(10.,17. + (timesdied*3));
+			double aimrate = 0.7;
+			int minaimtics = 1;
+			if(!tango_crackshot){
+				maxspread = 25.0;
+				aimrate = 0.75;
+				minaimtics = 4;
+			}
+			A_StartAim(maxspread,rate:aimrate,mintics:random(1,timesdied)+minaimtics,dontlead:randompick(0,0,0,0,1));
+		}
+		#### E 0 setstatelabel("shoot");
+	
+	
+	pain:
+		#### G 0 A_JumpIf(!random(0,2),"leapdodge");
+	reallypain:
+		#### G 3;
+		#### G 3 A_HDMPain();
+		#### G 0 {
+			if(!random(0,1)){
+				spread = random(20,40 - health*0.2);
+				if(!random(0,1))setstatelabel("shoot");
+				else setstatelabel("see");
+			}
+		}
+		#### AB 2 A_FaceTarget(50,50);
+		#### CD 3 A_ChangeVelocity(
+			frandom(-1,1),
+			frandom(1,max(0,5-lastinginjury*0.1))*randompick(-1,1),
+			0,CVF_RELATIVE
+		);
+		#### G 0 A_CPosRefire();
+		goto missile;
+	leapdodge:
+		#### G 1;
+		#### G 1 A_HDMPain();
+		#### G 2 {
+			A_FaceTarget();
+			angle+=random(-10,10);
+			if(floorz>=pos.z)
+				A_ChangeVelocity(0,randompick(-1,1)*4.5,2,CVF_RELATIVE);
+			//1/3 chance to crouchslide
+			if(!random(0,2)){
+				A_TangoCrouch();
+				A_ChangeVelocity(0,0,-2.5);
+				vel*=1.2;
+			}
+		}
+		#### G 0 A_JumpIf(random(0,1),"see");
+		goto shoot;
+	
+	
+	//frag state from the zombiestormtroopers, modified for goons.
+	frag:
+		#### ABCD 3 A_TurnToAim(40,shootstate:"fragAiming");
+		loop;
+	fragAiming:
+		#### E 1 A_StartAim(rate:0.8,mintics:random(0,timesdied),dontlead:randompick(0,0,0,1));
+		#### E 0 {
+			//reckless type has 1/3 chance to just fuckin send a rocket your way instead of throwing a frag
+			if(suppressionBehavior==SBE_RECKLESS && !random(0,2) && tango_recklessrocket)
+				A_TryRocketGrenade();
+		}
+	fragToss:
+		#### A 20{
+			A_StartSound("weapons/pocket",CHAN_WEAPON);
+			pitch-=frandom(15,25);
+		}
+		#### A 10{
+			A_SpawnItemEx("HDFragSpoon",cos(pitch)*4,-1,height-6-sin(pitch)*4,cos(pitch)*cos(angle)*4+vel.x,cos(pitch)*sin(angle)*4+vel.y,sin(-pitch)*4+vel.z,0,SXF_ABSOLUTEMOMENTUM|SXF_NOCHECKPOSITION|SXF_TRANSFERPITCH);
+			A_TangoFrag(25 - max(timesdied*2,10),lasttargetdist);
+		}
+		#### AAAAAAAA 18 A_JumpIf(CheckTargetInSight(),"see");
+		#### A 0 setstatelabel("rushtarget2");
+	}
+}

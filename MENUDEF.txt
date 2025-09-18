@@ -1,0 +1,16 @@
+AddOptionMenu "HDAddonMenu" {
+	SubMenu "GoonParty Settings","TangoSettings"
+}
+OptionMenu "TangoSettings" {
+	Title "GoonParty Settings"
+	StaticText " "
+	Option "Reckless rockets", "tango_recklessrocket", "YesNo"
+	StaticText "Rare AI types will occasionally launch really rude rockets."
+	StaticText " "
+	Option "Crackshot tangos", "tango_crackshot", "YesNo"
+	StaticText "Goons aim faster and hit right where they aim."
+	StaticText " "
+	Option "Crouching", "tango_crouch", "YesNo"
+	StaticText "Goons sometimes crouch when under fire or attacking."
+	StaticText " "
+}

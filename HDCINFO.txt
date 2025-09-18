@@ -1,0 +1,5 @@
+// HDCore Lib Spawntable definition file
+// add HDPartyGoon to the chaingunner spawntable!
+addSpawnTableSingleEntry => { "tableName": "ChaingunGuyReplaces", "name": "HDPartyGoon", "weight": "1", "persists": "true" }
+// add a slight extra bias to UndeadRifleman as well!
+addSpawnTableSingleEntry => { "tableName": "ChaingunGuyReplaces", "name": "UndeadRifleman", "weight": "1", "persists": "true" }

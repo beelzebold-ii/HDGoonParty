@@ -1,0 +1,4 @@
+// HDCore Lib Spawntable definition file
+// filter file only for id doom1
+// since chaingunners don't spawn in doom1, add tangos to the demon spawntable instead!
+addSpawnTableSingleEntry => { "tableName": "DemonReplaces", "name": "HDPartyGoon", "weight": "2", "persists": "true" }
