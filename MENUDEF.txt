@@ -1,16 +1,55 @@
-AddOptionMenu "HDAddonMenu" {
+AddOptionMenu "HDAddonMenu"
+{
 	SubMenu "GoonParty Settings","TangoSettings"
 }
-OptionMenu "TangoSettings" {
+
+AddOptionMenu "OptionsMenu"
+{
+	SubMenu "GoonParty Settings","TangoSettings"
+}
+
+OptionMenu "TangoSettings"
+{
 	Title "GoonParty Settings"
-	StaticText " "
+	SubMenu "Spawning Options", "TangoSpawning"
+	StaticText ""
 	Option "Reckless rockets", "tango_recklessrocket", "YesNo"
 	StaticText "Rare AI types will occasionally launch really rude rockets."
-	StaticText " "
+	StaticText ""
 	Option "Crackshot tangos", "tango_crackshot", "YesNo"
 	StaticText "Goons aim faster and hit right where they aim."
-	StaticText " "
+	StaticText ""
 	Option "Crouching", "tango_crouch", "YesNo"
 	StaticText "Goons sometimes crouch when under fire or attacking."
-	StaticText " "
+}
+
+OptionMenu "TangoSpawning"
+{
+	Title "GoonParty Spawning"
+	StaticText "Spawning Options", "Yellow"
+	StaticText ""
+	StaticText "Goon Chaingunner Spawn Options", "White"
+	Option "Spawns Enabled: ", "partygoon_chaingunner_enabled", "YesNo"
+	Slider "Spawn Weight: ", "partygoon_chaingunner_weight", 0.0, 100, .01, 2
+	SafeCommand "Reset Chaingunner Weight", "resetcvar partygoon_chaingunner_weight"
+	StaticText ""
+	StaticText "Goon Demon Spawn Options", "White"
+	Option "Spawns Enabled: ", "partygoon_demon_enabled", "YesNo"
+	Slider "Spawn Weight: ", "partygoon_Demon_weight", 0.0, 100, .01, 2
+	SafeCommand "Reset Demon Weight", "resetcvar partygoon_Demon_weight"
+	StaticText ""
+	StaticText "Goon Jackboot Spawn Options", "White"
+	Option "Spawns Enabled: ", "partygoon_jackboot_enabled", "YesNo"
+	Slider "Spawn Weight: ", "partygoon_Jackboot_weight", 0.0, 100, .01, 2
+	SafeCommand "Reset Jackboot Weight", "resetcvar partygoon_Jackboot_weight"
+	StaticText ""
+	StaticText "Goon Zombieman Spawn Options", "White"
+	Option "Spawns Enabled: ", "partygoon_zombieman_enabled", "YesNo"
+	Slider "Spawn Weight: ", "partygoon_Zombieman_weight", 0.0, 100, .01, 2
+	SafeCommand "Reset Zombieman Weight", "resetcvar partygoon_Zombieman_weight"
+	StaticText ""
+	StaticText "Goon Hoopbubble Spawn Options", "White"
+	Option "Spawns Enabled: ", "partygoon_hoopbubble_enabled", "YesNo"
+	Slider "Spawn Weight: ", "partygoon_Hoopbubble_weight", 0.0, 100, .01, 2
+	SafeCommand "Reset Hoopbubble Weight", "resetcvar partygoon_Hoopbubble_weight"
 }

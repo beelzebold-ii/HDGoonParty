@@ -1,3 +1,18 @@
+// AI Tweaks. - [Ted]
 server bool tango_recklessrocket = true;
 server bool tango_crackshot = true;
 server bool tango_crouch = true;
+
+// Spawning options. - [Ted]
+server float partygoon_chaingunner_weight = 1.5;
+server float partygoon_demon_weight = 3;
+server float partygoon_jackboot_weight = 20;
+server float partygoon_zombieman_weight = 5;
+server float partygoon_hoopbubble_weight = 0.5;
+
+// Whether to spawn at all, or not. - [Ted]
+server bool partygoon_chaingunner_enabled = true;
+server bool partygoon_demon_enabled = false;
+server bool partygoon_jackboot_enabled = false;
+server bool partygoon_zombieman_enabled = false;
+server bool partygoon_hoopbubble_enabled = false;
