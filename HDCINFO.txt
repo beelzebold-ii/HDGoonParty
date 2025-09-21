@@ -1,5 +1,12 @@
 // HDCore Lib Spawntable definition file
-// add HDPartyGoon to the chaingunner spawntable!
-addSpawnTableSingleEntry => { "tableName": "ChaingunGuyReplaces", "name": "HDPartyGoon", "weight": "1", "persists": "true" }
-// add a slight extra bias to UndeadRifleman as well!
-addSpawnTableSingleEntry => { "tableName": "ChaingunGuyReplaces", "name": "UndeadRifleman", "weight": "1", "persists": "true" }
+
+// New HDPartyGoon spawn table entries.
+addSpawnTableSingleEntry => { "tableName": "ChaingunGuyReplaces", "name": "HDPartyGoon", "weight": "#partygoon_chaingunner_weight", "persists": "true", "enabled": "#partygoon_chaingunner_enabled" }
+addSpawnTableSingleEntry => { "tableName": "DemonReplaces", "name": "HDPartyGoon", "weight": "#partygoon_demon_weight", "persists": "true", "enabled": "#partygoon_demon_enabled" }
+addSpawnTableSingleEntry => { "tableName": "ShotgunGuyReplaces", "name": "HDPartyGoon", "weight": "#partygoon_jackboot_weight", "persists": "true", "enabled": "#partygoon_jackboot_enabled" }
+addSpawnTableSingleEntry => { "tableName": "ZombieManReplaces", "name": "HDPartyGoon", "weight": "#partygoon_zombieman_weight", "persists": "true", "enabled": "#partygoon_zombieman_enabled" }
+addSpawnTableSingleEntry => { "tableName": "WolfensteinSSReplaces", "name": "HDPartyGoon", "weight": "#partygoon_hoopbubble_weight", "persists": "true", "enabled": "#partygoon_hoopbubble_enabled" }
+
+// Change the weight of the UndeadRifleman Entry. - [Ted]
+// This should probably be a CVAR, though I'm just gonna link it to if they're enabled via chaingunner spawns.
+setSpawnTableEntryWeight => { "tableName": "ChaingunGuyReplaces", "name": "UndeadRifleman", "weight": "3", "enabled": "#partygoon_chaingunner_enabled" }
