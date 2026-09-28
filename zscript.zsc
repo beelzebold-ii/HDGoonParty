@@ -17,7 +17,7 @@ class HDTangoEventHandler:eventhandler{
 			e.replacement = "HDPartyGoon";
 		}
 		if(e.replacee is "HDPartyGoon" && !random(0,20)){
-			e.replacement = "HDFistTango"
+			e.replacement = "HDFistTango";
 		}
 	}
 	override void WorldThingSpawned(worldevent e){
