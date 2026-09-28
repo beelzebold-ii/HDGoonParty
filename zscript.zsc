@@ -528,12 +528,14 @@ class HDPartyGoon:HDGoon{
 			double maxspread = frandom(10.,17. + (timesdied*3));
 			double aimrate = 0.7;
 			int minaimtics = 1;
+			double inacc = 2.;
 			if(!tango_crackshot){
 				maxspread = 25.0;
 				aimrate = 0.75;
 				minaimtics = 4;
+				inacc = max(8+timesdied,(spawnhealth()-health)>>2);
 			}
-			A_StartAim(maxspread,rate:aimrate,mintics:random(1,timesdied)+minaimtics,dontlead:randompick(0,0,0,0,1));
+			A_StartAim(maxspread,rate:aimrate,mintics:random(1,timesdied)+minaimtics,leadtype:randompick(0,0,0,2),inaccuracy:inacc);
 		}
 		#### E 0 setstatelabel("shoot");
 	
@@ -545,7 +547,7 @@ class HDPartyGoon:HDGoon{
 		#### G 3 A_HDMPain();
 		#### G 0 {
 			if(!random(0,1)){
-				spread = random(20,40 - health*0.2);
+				//spread = random(20,40 - health*0.2);
 				if(!random(0,1) && !fistsonly)setstatelabel("shoot");
 				else setstatelabel("see");
 			}
@@ -632,7 +634,7 @@ class HDPartyGoon:HDGoon{
 		#### ABCD 3 A_TurnToAim(40,shootstate:"fragAiming");
 		loop;
 	fragAiming:
-		#### E 1 A_StartAim(rate:0.8,mintics:random(0,timesdied),dontlead:randompick(0,0,0,1));
+		#### E 1 A_StartAim(rate:0.8,mintics:random(0,timesdied),leadtype:randompick(0,0,0,2));
 	fragToss:
 		#### A 20{
 			A_StartSound("weapons/pocket",CHAN_WEAPON);
