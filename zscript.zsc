@@ -65,8 +65,8 @@ class HDPartyGoon:HDGoon{
 	override void BeginPlay(){
 		super.beginplay();
 		suppressionBehavior = random(SBE_SUPPRESS,SBE_MIXED);
-		//sometimes select reckless 1/6 of the time
-		if(!random(0,5)){
+		//sometimes select reckless 1/12 of the time
+		if(!random(0,11)){
 			suppressionBehavior = SBE_RECKLESS;
 			minmissilechance*=0.6;
 		}
