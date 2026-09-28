@@ -553,7 +553,7 @@ class HDPartyGoon:HDGoon{
 				maxspread = 20.0;
 				aimrate = 0.8;
 				minaimtics = random(3,4);
-				inacc = max(8.+timesdied,(spawnhealth()-health)>>2);
+				inacc = max(8.+timesdied,(spawnhealth()-health)>>2) * 1.1;
 			}
 			
 			// if this is our first time firing since we woke up, have slightly worse accuracy
