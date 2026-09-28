@@ -556,7 +556,7 @@ class HDPartyGoon:HDGoon{
 			// if this is our first time firing since we woke up, have slightly worse accuracy
 			// only if the target is vaguely aiming at us, don't panicfire at a target we don't need to panicfire at
 			if(isSurprised){
-				console.printf("Goon was surprised!");
+				//console.printf("Goon was surprised!");
 				if(deltaangle(target.angle,target.AngleTo(self)) < 180.){
 					// we don't adjust starting maxspread because that would reduce final inaccuracy
 					// don't adjust aim any slower
@@ -568,7 +568,7 @@ class HDPartyGoon:HDGoon{
 					// yay, we can finally run the rabbit on these fuckers!
 					leadt = randompick(1,1,2);
 				}else{
-					console.printf("But target was facing away!");
+					//console.printf("But target was facing away!");
 					aimrate += 0.05;
 					maxspread += 5.;
 				}
