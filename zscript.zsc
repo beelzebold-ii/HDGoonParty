@@ -550,17 +550,17 @@ class HDPartyGoon:HDGoon{
 			double inacc = 2.;
 			int leadt = randompick(0,0,0,2);
 			if(!tango_crackshot){
-				maxspread = 25.0;
-				aimrate = 0.85;
+				maxspread = 20.0;
+				aimrate = 0.8;
 				minaimtics = random(3,4);
-				inacc = max(6.+timesdied,(spawnhealth()-health)>>2);
+				inacc = max(8.+timesdied,(spawnhealth()-health)>>2);
 			}
 			
 			// if this is our first time firing since we woke up, have slightly worse accuracy
 			// only if the target is vaguely aiming at us, don't panicfire at a target we don't need to panicfire at
 			if(isSurprised){
 				//console.printf("Goon was surprised!");
-				if(deltaangle(target.angle,target.AngleTo(self)) < 180.){
+				if(deltaangle(target.angle,target.AngleTo(self)) < 170.){
 					// we don't adjust starting maxspread because that would reduce final inaccuracy
 					// don't adjust aim any slower
 					// don't hesitate any longer
