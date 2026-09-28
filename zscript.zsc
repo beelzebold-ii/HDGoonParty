@@ -345,7 +345,7 @@ class HDPartyGoon:HDGoon{
 				spd = 0.4;
 			}
 			if(suppressionBehavior==SBE_HOMEBOY && floorz>=pos.z && !random(0,8)){
-				A_ChangeVelocity(lasttargetdist>128?0:-3,randompick(-2,2) * (lasttargetdist>128?1.,2.),2,CVF_RELATIVE);
+				A_ChangeVelocity(lasttargetdist>128?0:-3,randompick(-2,2) * (lasttargetdist>128?1.:2.),2,CVF_RELATIVE);
 			}
 			if(suppressionBehavior==SBE_BERSERKER && floorz>=pos.z && !random(0,3)){
 				A_ChangeVelocity(5,randompick(-2,2,0),2,CVF_RELATIVE);
@@ -552,7 +552,7 @@ class HDPartyGoon:HDGoon{
 			if(!tango_crackshot){
 				maxspread = 20.0;
 				aimrate = 0.8;
-				minaimtics = random(3,4);
+				minaimtics = random(1,3);
 				inacc = max(8.+timesdied,(spawnhealth()-health)>>2) * 1.1;
 			}
 			
