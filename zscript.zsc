@@ -283,13 +283,13 @@ class HDPartyGoon:HDGoon{
 	rushtarget:
 		#### A 0 A_JumpIf(
 			(//random chances based on behavior type
-			(suppressionBehavior==SBE_AGGRESSIVE && !random(0,2))//aggressive has 1/3 frag chance
-			||suppressionBehavior==SBE_RECKLESS//reckless always frags
-			||(!random(0,4))//otherwise 1/5 frag chance
+			(suppressionBehavior==SBE_AGGRESSIVE && !random(0,4))//aggressive has 1/5 frag chance
+			||(suppressionBehavior==SBE_AGGRESSIVE && !random(0,2))//reckless has 1/3 frag chance
+			||(!random(0,7))//otherwise 1/8 frag chance
 			)
 			&&(//distance checks
-			//reckless type doesn't give a fuck about distance, every other type wants at least 6 meters distance
-			lasttargetdist>(suppressionBehavior!=SBE_RECKLESS?HDCONST_ONEMETRE*6.:HDCONST_ONEMETRE)
+			//reckless type doesn't give a fuck about distance, every other type wants at least 10 meters distance
+			lasttargetdist>(suppressionBehavior!=SBE_RECKLESS?HDCONST_ONEMETRE*10.:HDCONST_ONEMETRE)
 			),
 			"frag");
 	rushtarget2:
@@ -313,8 +313,8 @@ class HDPartyGoon:HDGoon{
 					A_Vocalize(activesound,volume:frandom(0.7,1.),pitch:frandom(0.98,1.02));
 					A_CheckAmbushWait("roam");
 				}else{
-					//buuuut 50% chance to throw a grenade instead of attacking
-					if(random(0,1)){
+					//buuuut 25% chance to throw a grenade instead of attacking
+					if(random(0,3)){
 						A_CheckAmbushWait("aiming");
 					}else{
 						A_Vocalize(activesound,volume:frandom(0.7,1.),pitch:frandom(0.98,1.02));
@@ -341,11 +341,14 @@ class HDPartyGoon:HDGoon{
 			if(suppressionBehavior==SBE_HOMEBOY || suppressionBehavior==SBE_BERSERKER){
 				spd = 0.9;
 			}
+			if(suppressionBehavior==SBE_HOLD || suppressionBehavior==SBE_AMBUSH){
+				spd = 0.4;
+			}
 			if(suppressionBehavior==SBE_HOMEBOY && floorz>=pos.z && !random(0,8)){
-				A_ChangeVelocity(lasttargetdist>128?0:-3,randompick(-2,2),1,CVF_RELATIVE);
+				A_ChangeVelocity(lasttargetdist>128?0:-3,randompick(-2,2) * (lasttargetdist>128?1.,2.),2,CVF_RELATIVE);
 			}
 			if(suppressionBehavior==SBE_BERSERKER && floorz>=pos.z && !random(0,3)){
-				A_ChangeVelocity(4,randompick(-2,2),1,CVF_RELATIVE);
+				A_ChangeVelocity(5,randompick(-2,2,0),2,CVF_RELATIVE);
 			}
 			A_HDChase(speedmult:spd);
 		}
@@ -510,14 +513,14 @@ class HDPartyGoon:HDGoon{
 	missile:
 		#### A 0 A_JumpIf(fistsonly,"nomissile");
 		#### A 0 A_JumpIf(
-			(suppressionBehavior==SBE_RECKLESS || suppressionBehavior==SBE_AGGRESSIVE)?(!random(0,1)):(random(0,3)),
+			(suppressionBehavior==SBE_RECKLESS || suppressionBehavior==SBE_HOMEBOY || suppressionBehavior==SBE_BERSERKER)?(!random(0,1)):(random(0,4)),
 			"missile2");
-		//1/4 chance to leap toward the player before starting an attack
-		//1/2 for aggressive and reckless types
+		//1/5 chance to leap toward the player before starting an attack
+		//1/2 for berserker, homeboy, and reckless types
 		#### C 1 {
 			A_FaceTarget();
 			if(floorz>=pos.z)
-				A_ChangeVelocity(lasttargetdist>128?3:-3,randompick(-2,2),1,CVF_RELATIVE);
+				A_ChangeVelocity((lasttargetdist>128 || suppressionBehavior==SBE_BERSERKER)?3:-3,randompick(-2,2),1,CVF_RELATIVE);
 			if(suppressionBehavior==SBE_HOMEBOY)tics = 4;
 		}
 	missile2://suppressionBehavior SBE_RECKLESS has a 1/5 chance to throw a frag instead, for no real reason.
